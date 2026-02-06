@@ -1,0 +1,76 @@
+source 'https://github.com/CocoaPods/Specs.git'
+platform :ios, '15.0'
+
+ENV['COCOAPODS_DISABLE_STATS'] = 'true'
+
+project 'Runner', {
+  'Debug' => :debug,
+  'Profile' => :release,
+  'Release' => :release,
+}
+
+def flutter_root
+  generated_xcode_build_settings_path = File.expand_path(File.join('..', 'Flutter', 'Generated.xcconfig'), __FILE__)
+  unless File.exist?(generated_xcode_build_settings_path)
+    raise "#{generated_xcode_build_settings_path} must exist. If you're running pod install manually, make sure flutter pub get is executed first"
+  end
+
+  File.foreach(generated_xcode_build_settings_path) do |line|
+    matches = line.match(/FLUTTER_ROOT\=(.*)/)
+    return matches[1].strip if matches
+  end
+  raise "FLUTTER_ROOT not found in #{generated_xcode_build_settings_path}. Try deleting Generated.xcconfig, then run flutter pub get"
+end
+
+require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelper'), flutter_root)
+
+flutter_ios_podfile_setup
+
+target 'Runner' do
+  use_frameworks!
+  flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
+end
+
+post_install do |installer|
+  # 1. Flutter settings
+  installer.pods_project.targets.each do |target|
+    flutter_additional_ios_build_settings(target)
+  end
+  
+  # 2. Swift 5.7 for all targets
+  installer.pods_project.build_configurations.each do |config|
+    config.build_settings['SWIFT_VERSION'] = '5.7'
+    config.build_settings['ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES'] = 'YES'
+  end
+  
+  installer.pods_project.targets.each do |target|
+    target.build_configurations.each do |config|
+      config.build_settings['SWIFT_VERSION'] = '5.7'
+    end
+  end
+  
+  # 3. PRIVACY MANIFEST FIXES
+  # Force generation of Info.plist files for pods missing privacy manifests
+  installer.pods_project.targets.each do |target|
+    target.build_configurations.each do |config|
+      config.build_settings['GENERATE_INFOPLIST_FILE'] = 'YES'
+      
+      # Set specific Info.plist paths for known problematic pods
+      case target.name
+      when 'shared_preferences_foundation'
+        config.build_settings['INFOPLIST_FILE'] = 'Target Support Files/shared_preferences_foundation/shared_preferences_foundation-Info.plist'
+      when 'leveldb-library'
+        config.build_settings['INFOPLIST_FILE'] = 'Target Support Files/leveldb-library/leveldb-library-Info.plist'
+      end
+    end
+  end
+  
+  # 4. Also fix for Firebase pods that might have issues
+  installer.pods_project.targets.each do |target|
+    if target.name.include?('Firebase') || target.name.include?('Google')
+      target.build_configurations.each do |config|
+        config.build_settings['GENERATE_INFOPLIST_FILE'] = 'YES'
+      end
+    end
+  end
+end
