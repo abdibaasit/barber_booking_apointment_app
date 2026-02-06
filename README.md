@@ -59,7 +59,7 @@ lib/
 ### Installation
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-username/barber_booking_app.git
+   git clone https://github.com/abdibaasit/barber_booking_apointment_app.git
    ```
 2. Navigate to the project directory:
    ```bash
