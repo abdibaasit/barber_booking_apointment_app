@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:barber_booking_app/services/constant.dart';
 import 'package:barber_booking_app/services/app_theme.dart';
 import 'package:barber_booking_app/pages/onboarding.dart';
@@ -11,6 +12,9 @@ import 'package:barber_booking_app/firebase_options.dart';
 void main() async {
   // Hubi in xiriirka u dhexeeya Flutter iyo mashiinka hoose (engine) uu diyaar yahay ka hor inta aan la bilaabin code-ka async.
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Soo geli xogta sirta ah ee .env file-ka
+  await dotenv.load(fileName: ".env");
 
   // Bilowga habka lacag bixinta ee Stripe adoo isticmaalaya furaha la bixiyay.
   Stripe.publishableKey = publishableKey;

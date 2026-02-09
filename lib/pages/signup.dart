@@ -21,13 +21,27 @@ class _SignUpState extends State<SignUp> {
   final TextEditingController usernameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
+  final TextEditingController confirmPasswordController = TextEditingController();
+  final TextEditingController securityAnswerController = TextEditingController();
+  
+  String? selectedSecurityQuestion;
+  final List<String> securityQuestions = [
+    "What's your favorite color?",
+    "What's your football growing up?",
+    "What's your first lover name?",
+  ];
+
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
 
   // 'registration' waa shaqada abuuraysa akoonka isticmaalaha cusub.
   Future<void> registration() async {
     // Hubi in dhammaan sanduuqyada qoraalka ay buuxaan ka hor intaanan bilaabin.
     if (passwordController.text.isNotEmpty &&
         emailController.text.isNotEmpty &&
-        usernameController.text.isNotEmpty) {
+        usernameController.text.isNotEmpty &&
+        selectedSecurityQuestion != null &&
+        securityAnswerController.text.isNotEmpty) {
       try {
         // Concept: 'createUserWithEmailAndPassword' waxay akoon cusub ka dhisaysaa Firebase.
         // Waxay si toos ah u xaqiijinaysaa haddii iimaylku sax yahay ama horey loo isticmaalay.
@@ -43,6 +57,8 @@ class _SignUpState extends State<SignUp> {
           "username": usernameController.text,
           "email": emailController.text,
           "password": passwordController.text,
+          "securityQuestion": selectedSecurityQuestion,
+          "securityAnswer": securityAnswerController.text,
         };
 
         // Keydinta xogta ee Labada Meelood (Data Sync):
@@ -146,7 +162,85 @@ class _SignUpState extends State<SignUp> {
                 controller: passwordController,
                 hintText: 'Password',
                 prefixIcon: Icons.lock_outline,
-                obscureText: true,
+                obscureText: _obscurePassword,
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                    color: AppColors.textSecondary,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _obscurePassword = !_obscurePassword;
+                    });
+                  },
+                ),
+              ),
+              const SizedBox(height: 20),
+              CustomTextField(
+                controller: confirmPasswordController,
+                hintText: 'Confirm Password',
+                prefixIcon: Icons.lock_outline,
+                obscureText: _obscureConfirmPassword,
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscureConfirmPassword
+                        ? Icons.visibility_off
+                        : Icons.visibility,
+                    color: AppColors.textSecondary,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _obscureConfirmPassword = !_obscureConfirmPassword;
+                    });
+                  },
+                ),
+              ),
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppColors.card,
+                  borderRadius: BorderRadius.circular(30),
+                  boxShadow: [
+                     BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                  ]
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    isExpanded: true,
+                    value: selectedSecurityQuestion,
+                    dropdownColor: AppColors.card,
+                    hint: const Text(
+                      "Select Security Question",
+                      style: TextStyle(color: AppColors.textSecondary, fontSize: 18.0),
+                    ),
+                    items: securityQuestions.map((String question) {
+                      return DropdownMenuItem<String>(
+                        value: question,
+                        child: Text(
+                          question,
+                          style: const TextStyle(
+                              color: AppColors.textPrimary, fontSize: 16.0),
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (newValue) {
+                      setState(() {
+                        selectedSecurityQuestion = newValue;
+                      });
+                    },
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              CustomTextField(
+                controller: securityAnswerController,
+                hintText: 'Answer',
+                prefixIcon: Icons.question_answer_outlined,
               ),
               const SizedBox(height: 40),
               CustomButton(
@@ -157,6 +251,14 @@ class _SignUpState extends State<SignUp> {
                       const SnackBar(
                         backgroundColor: Colors.amber, // Warning color
                         content: Text("The password provided is too weak."),
+                      ),
+                    );
+                  } else if (passwordController.text !=
+                      confirmPasswordController.text) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        backgroundColor: Colors.amber,
+                        content: Text("Passwords do not match"),
                       ),
                     );
                   } else {

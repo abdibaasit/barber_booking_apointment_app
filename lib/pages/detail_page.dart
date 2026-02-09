@@ -7,13 +7,11 @@ import 'package:barber_booking_app/services/colors.dart';
 import 'package:barber_booking_app/pages/custom_button.dart';
 import 'package:barber_booking_app/services/database.dart';
 import 'package:barber_booking_app/services/shared_pref.dart';
-
-// Your Stripe Secret Key - Consider moving to a secure config
-const String secretKey = 'secretKey';
+import 'package:barber_booking_app/services/constant.dart';
 
 class DetailPage extends StatefulWidget {
-  final String service;
-  const DetailPage({super.key, required this.service});
+  final List<String> services;
+  const DetailPage({super.key, required this.services});
 
   @override
   State<DetailPage> createState() => _DetailPageState();
@@ -25,7 +23,17 @@ class _DetailPageState extends State<DetailPage> {
   int? selectedTimeIndex;
   DateTime? selectedDate;
   String? selectedTime;
-  String amount = "100";
+  String amount = "0";
+
+  // Service prices map
+  static const Map<String, String> servicePrices = {
+    'Haircut': '35',
+    'Shave': '4',
+    'Coloring': '16',
+    'Facial': '55',
+    'Styling': '33',
+    'Beard Trim': '9',
+  };
 
   // 'upcomingDays' waxay si toos ah u soo saartaa 7-da maalmood ee soo socda laga bilaabo maanta.
   // Concept: 'DateTime.now().add(Duration(days: index))' waxay noo suurtagelisaa inaan maalin kasta horay u socono (Dynamic List).
@@ -52,6 +60,12 @@ class _DetailPageState extends State<DetailPage> {
   void initState() {
     super.initState();
     getSharedPrefs();
+    // Calculate total amount from all selected services
+    int total = 0;
+    for (var service in widget.services) {
+      total += int.parse(servicePrices[service] ?? '0');
+    }
+    amount = total.toString();
   }
 
   // Shaqada lagu soo rido xogta SharedPreferences (Magaca iyo Id)
@@ -186,16 +200,22 @@ class _DetailPageState extends State<DetailPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              widget.service, // Use the selected service name here
+              widget.services.length == 1
+                  ? widget.services.first
+                  : '${widget.services.length} Services',
               style: const TextStyle(
                 color: AppColors.primary,
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const Text(
-              'Professional Barber',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 16),
+            Text(
+              widget.services.length == 1
+                  ? 'Professional Barber'
+                  : widget.services.join(', '),
+              style: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 5),
             Row(
@@ -387,7 +407,8 @@ class _DetailPageState extends State<DetailPage> {
       // Concept: Haddii lacagtu marto (Success), waxaan diyaarinaynaa xogta (Map) lagu darayo Firestore.
       Map<String, dynamic> bookingInfo = {
         "Name": name,
-        "Service": widget.service,
+        "Service": widget.services.join(', '),
+        "Services": widget.services,
         "Amount": amount,
         "Id": id,
         "Date": DateFormat('EEEE, d MMM').format(selectedDate!),
@@ -402,18 +423,58 @@ class _DetailPageState extends State<DetailPage> {
       // U muuji isticmaalaha in shaqadii ay dhammaatay (Success Dialog).
       showDialog(
         context: context,
-        builder: (_) => AlertDialog(
+        barrierDismissible: false, // Prevent dismissing by tapping outside
+        builder: (dialogContext) => AlertDialog(
           backgroundColor: AppColors.card,
-          content: Row(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
             children: const [
-              Icon(Icons.check_circle, color: AppColors.success),
-              SizedBox(width: 10),
+              Icon(Icons.check_circle, color: AppColors.success, size: 50),
+              SizedBox(height: 16),
               Text(
                 "Booking Successful!",
-                style: TextStyle(color: AppColors.textPrimary),
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: 8),
+              Text(
+                "Your appointment has been booked.",
+                style: TextStyle(color: AppColors.textSecondary),
+                textAlign: TextAlign.center,
               ),
             ],
           ),
+          actions: [
+            Center(
+              child: TextButton(
+                onPressed: () {
+                  Navigator.of(dialogContext).pop(); // Close dialog
+                  Navigator.of(context).pop(); // Go back to previous page
+                },
+                style: TextButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: const Text(
+                  "OK",
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       );
     } catch (e) {

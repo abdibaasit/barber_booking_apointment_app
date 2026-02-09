@@ -6,6 +6,10 @@ import 'package:barber_booking_app/pages/custom_text_field.dart';
 import 'package:barber_booking_app/pages/signup.dart';
 import 'package:barber_booking_app/pages/BottomNavigation.dart';
 import 'package:barber_booking_app/admin/admin_login.dart';
+import 'package:barber_booking_app/pages/forgot_password.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:barber_booking_app/services/database.dart';
+import 'package:barber_booking_app/services/shared_pref.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -20,28 +24,38 @@ class _LoginScreenState extends State<LoginScreen> {
   // Concept: 'TextEditingController' waa bridge (xiriiriye) noo ogolaanaya inaan ka soo qaadno qoraalka uu isticmaalahu ku qorayo Field-yada.
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
+  bool _obscurePassword = true;
 
   // 'userLogin' waa shaqada dhabta ah ee xaqiijinaysa soo gelitaanka isticmaalaha.
   Future<void> userLogin() async {
     try {
-      // Concept: 'signInWithEmailAndPassword' waa qaabka Firebase ay u xaqiijiso in iimaylka iyo sirta ay sax yihiin.
-      // Tani waa mid ammaan ah oo sirta u keydisa si aan la jebin karin.
       await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: emailController.text,
         password: passwordController.text,
       );
+      
+      // If Firebase Auth succeeds, we should fetch and save user data to SharedPrefs for the app session
+      await _saveUserSession(emailController.text);
 
-      // Haddii uu code-kani guuleysto, waxaa la fulinayaa talaabada xigta.
       if (!mounted) return;
-
-      // 'pushReplacement' waxay nagu geynaysaa bogga navigation-ka hoose (Main App).
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const CoolBottomNavigation()),
       );
     } on FirebaseAuthException catch (e) {
-      // Concept: 'try-catch' waxay naga caawinaysaa inaan qabano khaladaadka server-ka ka soo laabta.
-      // Sida: iimayl aan jirin ama ereyga sirta ah oo khalad ah.
+      if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
+        // Fallback: Check Firestore directly (in case password was reset via Forgot Password but Auth not synced)
+        bool fallbackSuccess = await _tryFallbackLogin(emailController.text, passwordController.text);
+        if (fallbackSuccess) {
+           if (!mounted) return;
+           Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const CoolBottomNavigation()),
+           );
+           return;
+        }
+      }
+
       String message = 'An error occurred: ${e.message}';
       if (e.code == 'user-not-found') {
         message = 'No user found for that email.';
@@ -52,7 +66,6 @@ class _LoginScreenState extends State<LoginScreen> {
       } else if (e.code == 'invalid-email') {
         message = 'The email address is badly formatted.';
       }
-      // Muuji farriinta khaladka ah adoo isticmaalaya SnackBar
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: AppColors.error,
@@ -63,6 +76,50 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       );
     }
+  }
+
+  Future<bool> _tryFallbackLogin(String email, String password) async {
+    try {
+      QuerySnapshot snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('email', isEqualTo: email)
+          .get();
+
+      if (snapshot.docs.isNotEmpty) {
+        var data = snapshot.docs.first.data() as Map<String, dynamic>;
+        if (data['password'] == password) {
+          // Credentials match Firestore record
+          await _saveUserSessionFromData(data);
+          return true;
+        }
+      }
+    } catch (e) {
+      // Ignore errors in fallback
+    }
+    return false;
+  }
+
+  Future<void> _saveUserSession(String email) async {
+     try {
+      QuerySnapshot snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('email', isEqualTo: email)
+          .get();
+      if (snapshot.docs.isNotEmpty) {
+         var data = snapshot.docs.first.data() as Map<String, dynamic>;
+         await _saveUserSessionFromData(data);
+      }
+     } catch (e) {
+       // Handle error
+     }
+  }
+
+  Future<void> _saveUserSessionFromData(Map<String, dynamic> data) async {
+      await sharedpreferenceHelper().saveUserId(data['id']);
+      await sharedpreferenceHelper().saveUserName(data['username']);
+      await sharedpreferenceHelper().saveUserEmail(data['email']);
+      String defaultImage = "https://ui-avatars.com/api/?name=${data['username']}&background=random";
+      await sharedpreferenceHelper().saveUserImage(data['Image'] ?? defaultImage);
   }
 
   @override
@@ -123,16 +180,37 @@ class _LoginScreenState extends State<LoginScreen> {
                 controller: passwordController,
                 hintText: 'Password',
                 prefixIcon: Icons.lock_outline,
-                obscureText: true,
+                obscureText: _obscurePassword,
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                    color: AppColors.textSecondary,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _obscurePassword = !_obscurePassword;
+                    });
+                  },
+                ),
               ),
               const SizedBox(height: 16),
+
               Align(
                 alignment: Alignment.centerRight,
-                child: Text(
-                  "Forgot Password?",
-                  style: TextStyle(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w600,
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const ForgotPassword()),
+                    );
+                  },
+                  child: Text(
+                    "Forgot Password?",
+                    style: TextStyle(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),

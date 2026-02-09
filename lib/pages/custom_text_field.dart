@@ -7,8 +7,8 @@ class CustomTextField extends StatelessWidget {
   final TextEditingController controller;
   final String hintText;
   final IconData prefixIcon;
-  final bool
-  obscureText; // Concept: 'obscureText' waxaa loo isticmaalaa in sirta la qariyo (****).
+  final bool obscureText; // Concept: 'obscureText' waxaa loo isticmaalaa in sirta la qariyo (****).
+  final Widget? suffixIcon;
 
   const CustomTextField({
     super.key,
@@ -16,6 +16,7 @@ class CustomTextField extends StatelessWidget {
     required this.hintText,
     required this.prefixIcon,
     this.obscureText = false,
+    this.suffixIcon,
   });
 
   // Meesha laga dhisayo qoraalka gelinta (Build method for TextField)
@@ -48,6 +49,7 @@ class CustomTextField extends StatelessWidget {
             color: AppColors.textSecondary,
             size: 20,
           ),
+          suffixIcon: suffixIcon,
           hintText: hintText,
           hintStyle: const TextStyle(color: AppColors.textSecondary),
           contentPadding: const EdgeInsets.symmetric(
@@ -55,8 +57,8 @@ class CustomTextField extends StatelessWidget {
             horizontal: 20,
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
             borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+            borderRadius: BorderRadius.circular(12),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
