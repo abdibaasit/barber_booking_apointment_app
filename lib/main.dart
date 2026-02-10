@@ -6,6 +6,7 @@ import 'package:barber_booking_app/services/constant.dart';
 import 'package:barber_booking_app/services/app_theme.dart';
 import 'package:barber_booking_app/pages/onboarding.dart';
 import 'package:barber_booking_app/firebase_options.dart';
+import 'package:get/get.dart';
 
 // Shaqada ugu horreysa ee abka (Entry point).
 // Halkan waa meesha uu barnaamijku ka bilaabmo (main function).
@@ -34,7 +35,7 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return GetMaterialApp(
       // Daminta astaanta yar ee 'debug' ee dhinaca midig ee sare.
       debugShowCheckedModeBanner: false,
 

@@ -54,11 +54,29 @@ class _OnboardingState extends State<Onboarding> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Spacer(),
+                  Center(
+                    child: Image.asset(
+                      'assets/LogoApp.png',
+                      height: 100,
+                      width: 100,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Maqas Barber',
+                    style: TextStyle(
+                      color: AppColors.primary,
+                      fontSize: 36,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.0,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
                   const Text(
                     'Experience the\nUltimate Haircut.',
                     style: TextStyle(
                       color: AppColors.textPrimary,
-                      fontSize: 48,
+                      fontSize: 38,
                       fontWeight: FontWeight.bold,
                       height: 1.1,
                       letterSpacing: -1.0,

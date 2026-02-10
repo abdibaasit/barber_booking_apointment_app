@@ -55,19 +55,16 @@ class _ProfileState extends State<Profile> {
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(60),
-                        child: image != null
+                        child: (image != null && image!.isNotEmpty)
                             ? Image.network(
                                 image!,
                                 height: 120,
                                 width: 120,
                                 fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    _buildInitialsAvatar(),
                               )
-                            : Image.asset(
-                                "assets/barber.jpeg",
-                                height: 120,
-                                width: 120,
-                                fit: BoxFit.cover,
-                              ),
+                            : _buildInitialsAvatar(),
                       ),
                     ),
                   ),
@@ -102,6 +99,32 @@ class _ProfileState extends State<Profile> {
                 ],
               ),
             ),
+    );
+  }
+
+  // Build an avatar with the user's first 2 initials
+  Widget _buildInitialsAvatar() {
+    String initials = (name != null && name!.isNotEmpty)
+        ? name!.substring(0, name!.length >= 2 ? 2 : name!.length).toUpperCase()
+        : "?";
+    return Container(
+      height: 120,
+      width: 120,
+      decoration: BoxDecoration(
+        color: AppColors.primary.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(60),
+      ),
+      child: Center(
+        child: Text(
+          initials,
+          style: const TextStyle(
+            color: AppColors.primary,
+            fontSize: 40,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 2,
+          ),
+        ),
+      ),
     );
   }
 

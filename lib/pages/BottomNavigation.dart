@@ -1,35 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:curved_navigation_bar/curved_navigation_bar.dart';
+import 'package:get/get.dart';
+import 'package:barber_booking_app/controllers/main_controller.dart';
 import 'package:barber_booking_app/pages/home.dart';
 import 'package:barber_booking_app/pages/Booking.dart';
 import 'package:barber_booking_app/pages/Profile.dart';
 import 'package:barber_booking_app/services/colors.dart';
 
-class CoolBottomNavigation extends StatefulWidget {
-  const CoolBottomNavigation({super.key});
+class CoolBottomNavigation extends StatelessWidget {
+  final int initialTab;
+  const CoolBottomNavigation({super.key, this.initialTab = 0});
 
-  @override
-  State<CoolBottomNavigation> createState() => _CoolBottomNavigationState();
-}
-
-// CoolBottomNavigation waa widget-ka saldhigga u ah navigation-ka hoose.
-// Concept: 'StatefulWidget' ayaa loo isticmaalay sababtoo ah waxaan u baahannahay inaan beddelno 'index-ka' bogga marka qofku badhamada riixo.
-class _CoolBottomNavigationState extends State<CoolBottomNavigation> {
-  // '_currentIndex' waxay noo sheegaysaa bogga hadda furan (0=Home, 1=Bookings, 2=Profile).
-  int _currentIndex = 0;
-
-  // Concept: Liiskani wuxuu ka kooban yahay bogagga rasmiga ah ee abka.
-  // Marka index-ku isbeddelo, 'body' ee Scaffold ayaa iyaduna isbeddelaysa.
+  // Pages list
   final List<Widget> _pages = const [Home(), MyBookings(), Profile()];
 
   @override
   Widget build(BuildContext context) {
+    // Initialize Controller and set initial tab
+    final MainController controller = Get.put(MainController());
+    controller.changeIndex(initialTab);
+
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: _pages[_currentIndex],
+      
+      // Use Obx to listen to changes in currentIndex
+      body: Obx(() => _pages[controller.currentIndex.value]),
 
-      bottomNavigationBar: CurvedNavigationBar(
-        index: _currentIndex,
+      bottomNavigationBar: Obx(() => CurvedNavigationBar(
+        index: controller.currentIndex.value,
         height: 60,
         backgroundColor: AppColors.background,
         color: AppColors.card,
@@ -42,11 +40,9 @@ class _CoolBottomNavigationState extends State<CoolBottomNavigation> {
         ],
 
         onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
+          controller.changeIndex(index);
         },
-      ),
+      )),
     );
   }
 }

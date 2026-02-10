@@ -1,8 +1,10 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:barber_booking_app/services/colors.dart';
 import 'package:barber_booking_app/pages/detail_page.dart';
 import 'package:barber_booking_app/pages/service_selection_page.dart';
 import 'package:barber_booking_app/services/shared_pref.dart';
+import 'package:barber_booking_app/services/database.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
@@ -16,50 +18,18 @@ class Home extends StatefulWidget {
 class _HomeState extends State<Home> {
   String userName = '';
 
-  // Services with images from internet
-  static const List<Map<String, dynamic>> services = [
-    {
-      'name': 'Haircut',
-      'price': 35,
-      'image': 'https://i.pinimg.com/originals/58/57/07/5857077de07ee330c859069586c539a8.jpg',
-      'icon': Icons.content_cut,
-    },
-    {
-      'name': 'Shave',
-      'price': 4,
-      'image': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ_qHIp-W7VIktWmHiphFv5ajInjiREC4OFNw&s',
-      'icon': Icons.face_retouching_natural,
-    },
-    {
-      'name': 'Coloring',
-      'price': 16,
-      'image': 'https://assets.bleachlondon.com/image/upload/w_300,h_300,c_fill,q_80,f_auto/v1603976076/master_platform/how_to/type1_virgin_root_to_tip_roxy/2.tone/Root-To-Tip-Type-1-Tone-Step-2.jpg',
-      'icon': Icons.palette,
-    },
-    {
-      'name': 'Facial',
-      'price': 55,
-      'image': 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=400',
-      'icon': Icons.spa,
-    },
-    {
-      'name': 'Styling',
-      'price': 33,
-      'image': 'https://zorainsstudio.com/wp-content/uploads/2019/10/Personal-Grooming-Hair.jpg',
-      'icon': Icons.brush,
-    },
-    {
-      'name': 'Beard Trim',
-      'price': 9,
-      'image': 'https://img.freepik.com/free-photo/young-man-getting-his-beard-styled-barber_23-2148985728.jpg?semt=ais_hybrid&w=740&q=80',
-      'icon': Icons.content_cut_outlined,
-    },
-  ];
+  Stream? serviceStream;
 
   @override
   void initState() {
     super.initState();
     _loadUserName();
+    getServices();
+  }
+
+  Future<void> getServices() async {
+    serviceStream = await DatabaseService().getServices();
+    setState(() {});
   }
 
   Future<void> _loadUserName() async {
@@ -194,24 +164,35 @@ class _HomeState extends State<Home> {
                 ),
               ),
               const SizedBox(height: 15),
-              // Services Grid with Images
+              // Services Grid with Images (StreamBuilder)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                child: GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate:
-                      const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
-                    childAspectRatio: 0.85,
-                  ),
-                  itemCount: services.length,
-                  itemBuilder: (context, index) {
-                    final service = services[index];
-                    return _buildServiceCard(service);
-                  },
+                child: StreamBuilder(
+                  stream: serviceStream,
+                  builder: (context, AsyncSnapshot snapshot) {
+                    if (!snapshot.hasData) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (snapshot.data.docs.isEmpty) {
+                      return const Center(child: Text("No services available.", style: TextStyle(color: AppColors.textSecondary)));
+                    }
+                    return GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 16,
+                        mainAxisSpacing: 16,
+                        childAspectRatio: 0.85,
+                      ),
+                      itemCount: snapshot.data.docs.length,
+                      itemBuilder: (context, index) {
+                        DocumentSnapshot ds = snapshot.data.docs[index];
+                        return _buildServiceCard(ds);
+                      },
+                    );
+                  }
                 ),
               ),
               const SizedBox(height: 25),
@@ -260,7 +241,14 @@ class _HomeState extends State<Home> {
     );
   }
 
-  Widget _buildServiceCard(Map<String, dynamic> service) {
+  Widget _buildServiceCard(DocumentSnapshot ds) {
+    Map<String, dynamic> data = ds.data() as Map<String, dynamic>;
+    String name = data['name'] ?? 'Service';
+    String image = data['image'] ?? '';
+    // Handle number parsing safely
+    double price = double.tryParse(data['price'].toString()) ?? 0.0;
+    double discount = double.tryParse(data['discountPrice'].toString()) ?? 0.0;
+
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
@@ -279,7 +267,7 @@ class _HomeState extends State<Home> {
           children: [
             // Service image
             Image.network(
-              service['image'],
+              image,
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) {
                 return Container(
@@ -288,7 +276,7 @@ class _HomeState extends State<Home> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(
-                        service['icon'],
+                        Icons.content_cut,
                         size: 50,
                         color: AppColors.primary.withOpacity(0.5),
                       ),
@@ -331,12 +319,35 @@ class _HomeState extends State<Home> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    service['name'],
+                    name,
                     style: const TextStyle(
                       color: AppColors.textPrimary,
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
+                  ),
+                  Row(
+                    children: [
+                      if (discount > 0) ...[
+                        Text(
+                          "\$${price.toStringAsFixed(0)}",
+                          style: const TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 14,
+                            decoration: TextDecoration.lineThrough,
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                      ],
+                      Text(
+                        "\$${(discount > 0 ? discount : price).toStringAsFixed(0)}",
+                        style: const TextStyle(
+                          color: AppColors.primary,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -364,11 +375,11 @@ class _HomeState extends State<Home> {
       ),
       child: Column(
         children: [
-          // Grid Row: Location (left) and Social Links (right)
+          // Grid Row Location (left) and Social Links (right)
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Left - Location
+              // Left  Location
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -403,7 +414,7 @@ class _HomeState extends State<Home> {
                   ],
                 ),
               ),
-              // Right - Social Links
+              // Right  Social Links
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [

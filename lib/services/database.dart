@@ -45,4 +45,41 @@ class DatabaseService {
         .doc(userId)
         .delete();
   }
+
+  // Shaqadan waxay soo celisaa xogta dhammaan isticmaalayaasha (Users).
+  Future<Stream<QuerySnapshot>> getAllUsers() async {
+    return FirebaseFirestore.instance.collection("users").snapshots();
+  }
+
+  // SERVICES MANAGEMENT
+  
+  // Add a new service (used for seeding or admin adding)
+  Future addService(Map<String, dynamic> serviceData) async {
+    await FirebaseFirestore.instance.collection("Services").add(serviceData);
+  }
+
+  // Get live stream of services
+  Future<Stream<QuerySnapshot>> getServices() async {
+    return FirebaseFirestore.instance.collection("Services").snapshots();
+  }
+
+  // Update service details (price, discount, name, image)
+  Future updateService(String id, Map<String, dynamic> updateData) async {
+    await FirebaseFirestore.instance.collection("Services").doc(id).update(updateData);
+  }
+
+  // Delete a service
+  Future deleteService(String id) async {
+    await FirebaseFirestore.instance.collection("Services").doc(id).delete();
+  }
+
+  // BOOKING MANAGEMENT UPDATES
+
+  // Update booking status (e.g., "Done", "Cancelled") instead of deleting
+  Future updateBookingStatus(String id, String status) async {
+    return await FirebaseFirestore.instance
+        .collection("Booking")
+        .doc(id)
+        .update({"Status": status});
+  }
 }

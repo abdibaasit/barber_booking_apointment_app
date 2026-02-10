@@ -118,8 +118,7 @@ class _LoginScreenState extends State<LoginScreen> {
       await sharedpreferenceHelper().saveUserId(data['id']);
       await sharedpreferenceHelper().saveUserName(data['username']);
       await sharedpreferenceHelper().saveUserEmail(data['email']);
-      String defaultImage = "https://ui-avatars.com/api/?name=${data['username']}&background=random";
-      await sharedpreferenceHelper().saveUserImage(data['Image'] ?? defaultImage);
+      await sharedpreferenceHelper().saveUserImage(data['Image'] ?? '');
   }
 
   @override
@@ -135,7 +134,7 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 40),
               Center(
                 child: Container(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
                     color: AppColors.card,
                     shape: BoxShape.circle,
@@ -147,10 +146,13 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ],
                   ),
-                  child: const Icon(
-                    Icons.content_cut_rounded,
-                    size: 60,
-                    color: AppColors.primary,
+                  child: ClipOval(
+                    child: Image.asset(
+                      'assets/LogoApp.png',
+                      height: 80,
+                      width: 80,
+                      fit: BoxFit.cover,
+                    ),
                   ),
                 ),
               ),
@@ -166,7 +168,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 10),
               const Text(
-                "Please sign in to your account",
+                "Sign in to Maqas Barber",
                 style: TextStyle(color: AppColors.textSecondary, fontSize: 16),
               ),
               const SizedBox(height: 40),

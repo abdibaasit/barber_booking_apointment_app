@@ -1,6 +1,8 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:barber_booking_app/services/colors.dart';
 import 'package:barber_booking_app/pages/detail_page.dart';
+import 'package:barber_booking_app/services/database.dart';
 
 class ServiceSelectionPage extends StatefulWidget {
   const ServiceSelectionPage({super.key});
@@ -10,52 +12,34 @@ class ServiceSelectionPage extends StatefulWidget {
 }
 
 class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
-  // Map of services with their prices and image URLs
-  static const List<Map<String, dynamic>> services = [
-    {
-      'name': 'Haircut',
-      'price': 35,
-      'image': 'https://i.pinimg.com/originals/58/57/07/5857077de07ee330c859069586c539a8.jpg',
-    },
-    {
-      'name': 'Shave',
-      'price': 4,
-      'image': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ_qHIp-W7VIktWmHiphFv5ajInjiREC4OFNw&s',
-    },
-    {
-      'name': 'Coloring',
-      'price': 16,
-      'image': 'https://assets.bleachlondon.com/image/upload/w_300,h_300,c_fill,q_80,f_auto/v1603976076/master_platform/how_to/type1_virgin_root_to_tip_roxy/2.tone/Root-To-Tip-Type-1-Tone-Step-2.jpg',
-    },
-    {
-      'name': 'Facial',
-      'price': 55,
-      'image': 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=400',
-    },
-    {
-      'name': 'Styling',
-      'price': 33,
-      'image': 'https://zorainsstudio.com/wp-content/uploads/2019/10/Personal-Grooming-Hair.jpg',
-    },
-    {
-      'name': 'Beard Trim',
-      'price': 9,
-      'image': 'https://img.freepik.com/free-photo/young-man-getting-his-beard-styled-barber_23-2148985728.jpg?semt=ais_hybrid&w=740&q=80',
-    },
-  ];
-
+  Stream? serviceStream;
+  List<DocumentSnapshot> services = [];
+  
   // Set to track selected services
-  Set<String> selectedServices = {};
+  Set<String> selectedServicesName = {};
+  double totalPrice = 0;
 
-  // Calculate total price
-  int get totalPrice {
-    int total = 0;
-    for (var service in services) {
-      if (selectedServices.contains(service['name'])) {
-        total += service['price'] as int;
+  @override
+  void initState() {
+    super.initState();
+    getServices();
+  }
+
+  Future<void> getServices() async {
+    serviceStream = await DatabaseService().getServices();
+    setState(() {});
+  }
+
+  void _toggleService(String name, double price) {
+    setState(() {
+      if (selectedServicesName.contains(name)) {
+        selectedServicesName.remove(name);
+        totalPrice -= price;
+      } else {
+        selectedServicesName.add(name);
+        totalPrice += price;
       }
-    }
-    return total;
+    });
   }
 
   @override
@@ -97,19 +81,26 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
           ),
           // Service grid
           Expanded(
-            child: GridView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                childAspectRatio: 0.75,
-              ),
-              itemCount: services.length,
-              itemBuilder: (context, index) {
-                final service = services[index];
-                final isSelected = selectedServices.contains(service['name']);
-                return _buildServiceCard(service, isSelected);
+            child: StreamBuilder(
+              stream: serviceStream,
+              builder: (context, AsyncSnapshot snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                return GridView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                    childAspectRatio: 0.75,
+                  ),
+                  itemCount: snapshot.data.docs.length,
+                  itemBuilder: (context, index) {
+                    DocumentSnapshot ds = snapshot.data.docs[index];
+                    return _buildServiceCard(ds);
+                  },
+                );
               },
             ),
           ),
@@ -135,19 +126,19 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   // Selected services summary
-                  if (selectedServices.isNotEmpty) ...[
+                  if (selectedServicesName.isNotEmpty) ...[
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          "${selectedServices.length} service${selectedServices.length > 1 ? 's' : ''} selected",
+                          "${selectedServicesName.length} service${selectedServicesName.length > 1 ? 's' : ''} selected",
                           style: const TextStyle(
                             color: AppColors.textSecondary,
                             fontSize: 14,
                           ),
                         ),
                         Text(
-                          "Total: \$$totalPrice",
+                          "Total: \$${totalPrice.toStringAsFixed(0)}",
                           style: const TextStyle(
                             color: AppColors.primary,
                             fontSize: 20,
@@ -162,23 +153,24 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: selectedServices.isEmpty
+                      onPressed: selectedServicesName.isEmpty
                           ? null
                           : () {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
                                   builder: (context) => DetailPage(
-                                    services: selectedServices.toList(),
+                                    services: selectedServicesName.toList(),
+                                    totalPrice: totalPrice.toStringAsFixed(0),
                                   ),
                                 ),
                               );
                             },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: selectedServices.isEmpty
+                        backgroundColor: selectedServicesName.isEmpty
                             ? AppColors.background.withOpacity(0.5)
                             : AppColors.primary,
-                        foregroundColor: selectedServices.isEmpty
+                        foregroundColor: selectedServicesName.isEmpty
                             ? AppColors.textSecondary
                             : Colors.black,
                         padding: const EdgeInsets.symmetric(vertical: 16),
@@ -187,9 +179,9 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                         ),
                       ),
                       child: Text(
-                        selectedServices.isEmpty
+                        selectedServicesName.isEmpty
                             ? "Select Services"
-                            : "Continue to Booking - \$$totalPrice",
+                            : "Continue to Booking - \$${totalPrice.toStringAsFixed(0)}",
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -206,17 +198,20 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
     );
   }
 
-  Widget _buildServiceCard(Map<String, dynamic> service, bool isSelected) {
+  Widget _buildServiceCard(DocumentSnapshot ds) {
+    Map<String, dynamic> data = ds.data() as Map<String, dynamic>;
+    String name = data['name'] ?? 'Service';
+    String image = data['image'] ?? '';
+    double price = double.parse(data['price'].toString());
+    double discount = double.parse(data['discountPrice'].toString());
+    
+    // Use discount price if available and greater than 0
+    double finalPrice = discount > 0 ? discount : price;
+
+    bool isSelected = selectedServicesName.contains(name);
+
     return GestureDetector(
-      onTap: () {
-        setState(() {
-          if (isSelected) {
-            selectedServices.remove(service['name']);
-          } else {
-            selectedServices.add(service['name']);
-          }
-        });
-      },
+      onTap: () => _toggleService(name, finalPrice),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         decoration: BoxDecoration(
@@ -242,7 +237,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
             children: [
               // Service image
               Image.network(
-                service['image'],
+                image,
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) {
                   return Container(
@@ -251,18 +246,6 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                       Icons.content_cut,
                       size: 50,
                       color: AppColors.primary.withOpacity(0.5),
-                    ),
-                  );
-                },
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) return child;
-                  return Container(
-                    color: AppColors.card,
-                    child: const Center(
-                      child: CircularProgressIndicator(
-                        color: AppColors.primary,
-                        strokeWidth: 2,
-                      ),
                     ),
                   );
                 },
@@ -289,7 +272,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      service['name'],
+                      name,
                       style: const TextStyle(
                         color: AppColors.textPrimary,
                         fontSize: 16,
@@ -297,13 +280,29 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      "\$${service['price']}",
-                      style: const TextStyle(
-                        color: AppColors.primary,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    Row(
+                      children: [
+                         if (discount > 0) ...[
+                          Text(
+                            "\$$price", // Old Price with strikethrough
+                            style: const TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              decoration: TextDecoration.lineThrough,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                         ],
+                        Text(
+                          "\$$finalPrice", // Final price (Discounted or Regular)
+                          style: const TextStyle(
+                            color: AppColors.primary,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),

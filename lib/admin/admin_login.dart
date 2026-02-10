@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart'; 
 import 'package:flutter/material.dart';
 import 'admin_home.dart';
+import 'admin_bottom_nav.dart';
 import 'package:barber_booking_app/services/database.dart';
 import 'package:barber_booking_app/services/colors.dart';
 import 'package:barber_booking_app/pages/custom_text_field.dart';
@@ -43,7 +44,7 @@ class _AdminLoginState extends State<AdminLogin> {
         // Concept: Tani waxay ka dhigan tahay in maamuluhu uusan dib ugu soo noqon karin bogga login-ka marka uu galo.
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const AdminHome()),
+          MaterialPageRoute(builder: (context) => const AdminBottomNav()),
         );
       } else {
         // Haddii aan xogta la helin, muuji farriin khalad ah (SnackBar).

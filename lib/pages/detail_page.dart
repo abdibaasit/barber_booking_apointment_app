@@ -7,11 +7,15 @@ import 'package:barber_booking_app/services/colors.dart';
 import 'package:barber_booking_app/pages/custom_button.dart';
 import 'package:barber_booking_app/services/database.dart';
 import 'package:barber_booking_app/services/shared_pref.dart';
+import 'package:get/get.dart';
+import 'package:barber_booking_app/controllers/main_controller.dart';
+import 'package:barber_booking_app/pages/BottomNavigation.dart';
 import 'package:barber_booking_app/services/constant.dart';
 
 class DetailPage extends StatefulWidget {
   final List<String> services;
-  const DetailPage({super.key, required this.services});
+  final String totalPrice;
+  const DetailPage({super.key, required this.services, required this.totalPrice});
 
   @override
   State<DetailPage> createState() => _DetailPageState();
@@ -24,16 +28,6 @@ class _DetailPageState extends State<DetailPage> {
   DateTime? selectedDate;
   String? selectedTime;
   String amount = "0";
-
-  // Service prices map
-  static const Map<String, String> servicePrices = {
-    'Haircut': '35',
-    'Shave': '4',
-    'Coloring': '16',
-    'Facial': '55',
-    'Styling': '33',
-    'Beard Trim': '9',
-  };
 
   // 'upcomingDays' waxay si toos ah u soo saartaa 7-da maalmood ee soo socda laga bilaabo maanta.
   // Concept: 'DateTime.now().add(Duration(days: index))' waxay noo suurtagelisaa inaan maalin kasta horay u socono (Dynamic List).
@@ -60,12 +54,7 @@ class _DetailPageState extends State<DetailPage> {
   void initState() {
     super.initState();
     getSharedPrefs();
-    // Calculate total amount from all selected services
-    int total = 0;
-    for (var service in widget.services) {
-      total += int.parse(servicePrices[service] ?? '0');
-    }
-    amount = total.toString();
+    amount = widget.totalPrice;
   }
 
   // Shaqada lagu soo rido xogta SharedPreferences (Magaca iyo Id)
@@ -421,6 +410,7 @@ class _DetailPageState extends State<DetailPage> {
       if (!mounted) return;
 
       // U muuji isticmaalaha in shaqadii ay dhammaatay (Success Dialog).
+      // U muuji isticmaalaha in shaqadii ay dhammaatay (Success Dialog).
       showDialog(
         context: context,
         barrierDismissible: false, // Prevent dismissing by tapping outside
@@ -454,8 +444,11 @@ class _DetailPageState extends State<DetailPage> {
             Center(
               child: TextButton(
                 onPressed: () {
-                  Navigator.of(dialogContext).pop(); // Close dialog
-                  Navigator.of(context).pop(); // Go back to previous page
+                  // Close dialog
+                  Navigator.of(dialogContext).pop(); 
+                  
+                  // Navigate to Bookings tab (index 1)
+                  Get.offAll(() => const CoolBottomNavigation(initialTab: 1));
                 },
                 style: TextButton.styleFrom(
                   backgroundColor: AppColors.primary,
